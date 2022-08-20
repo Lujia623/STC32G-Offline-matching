@@ -8,24 +8,7 @@
 #include "app_led.h"
 #include "app_key.h"
 
-// extern uint8_t Rxbuf[128];
 uint8_t xdata mem_pool[1024 * 2];
-
-void Delay500ms()        //@24.000MHz
-{
-    unsigned char i, j, k;
-
-    _nop_();
-    _nop_();
-    i = 61;
-    j = 225;
-    k = 62;
-    do {
-        do {
-            while (--k);
-        } while (--j);
-    } while (--i);
-}
 
 int main(void) 
 {
