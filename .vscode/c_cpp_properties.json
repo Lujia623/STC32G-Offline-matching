@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/Source/APP/inc/",
+                "${workspaceFolder}/Source/APP/src/**",
+                "D:/Program Files (x86)/MDK5/C251/Inc/"
+            ],
+            "compilerPath": "D:\\Program Files (x86)\\mingw64\\bin\\gcc.exe",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "windows-gcc-x64"
+        }
+    ],
+    "version": 4
+}

@@ -1,0 +1,21 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.encoding": "gb2312",
+    "files.associations": {
+      "*.h": "c",
+      "STC32G.H": "c",
+      "INTRINS.H": "C",
+      "ASSERT.H": "cpp",
+      "REG251S.H": "cpp",
+      "STDIO.H": "cpp",
+      "SETJMP.H": "cpp",
+      "STRING.H": "cpp",
+      "STDLIB.H": "cpp"
+    }
+  }
+}
