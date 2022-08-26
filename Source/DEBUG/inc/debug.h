@@ -26,6 +26,7 @@
 #define LOG_D(fmt, ...)      dbg_log_line("DEBUG", 0, fmt, ##__VA_ARGS__)
 #define LOG_W(fmt, ...)      dbg_log_line("WARNING", 33, fmt, ##__VA_ARGS__)
 #define LOG_E(fmt, ...)      dbg_log_line("ERROR", 31, fmt, ##__VA_ARGS__)
+#define LOG_G(fmt, ...)      dbg_log_line("PASS", 32, fmt, ##__VA_ARGS__)
 #endif
 
 #endif /*__DEBUG_H_*/

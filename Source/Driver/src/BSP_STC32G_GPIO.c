@@ -75,6 +75,11 @@ void GPIO_config(void)
 	P5_MODE_IO_PU(GPIO_Pin_All);		//P5 设置为准双向口
 	P6_MODE_IO_PU(GPIO_Pin_All);		//P6 设置为准双向口
 	P7_MODE_IO_PU(GPIO_Pin_All);		//P7 设置为准双向口
-	
+	P4_MODE_IN_HIZ(GPIO_Pin_6);			//UART2 RX
+    P4_MODE_OUT_PP(GPIO_Pin_7);			//UART2 TX
+	P5_MODE_IN_HIZ(GPIO_Pin_0);			//UART3 RX
+    P5_MODE_OUT_PP(GPIO_Pin_1);			//UART3 TX
+	P5_MODE_IN_HIZ(GPIO_Pin_2);			//UART4 RX
+    P5_MODE_OUT_PP(GPIO_Pin_3);			//UART4 TX
 	P1_PULL_UP_ENABLE(GPIO_Pin_4 | GPIO_Pin_5);	//P1.4,P1.5 开启内部上拉
 }

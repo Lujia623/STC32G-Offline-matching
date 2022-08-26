@@ -1,4 +1,5 @@
 #include "app_uart.h"
+#include "debug.h"
 
 static sCommonRingBuf CommonRingBuf[COMMON_UART_MAX];
 
@@ -154,7 +155,7 @@ static uint8_t CommonTxBuf_is_Empty(eCommon_UARTx eCOMM_UARTx)
     return is_empty;
 }
 
-void CommonSenddata(eCommon_UARTx eCOMM_UARTx, uint8_t *databuf, uint16_t data_len) 
+uint8_t CommonSenddata(eCommon_UARTx eCOMM_UARTx, uint8_t *databuf, uint16_t data_len) 
 {
     sCommonRingBuf *pbuf = NULL;
     uint8_t error = COMMON_NO_ERROR;
@@ -166,14 +167,18 @@ void CommonSenddata(eCommon_UARTx eCOMM_UARTx, uint8_t *databuf, uint16_t data_l
     }
 
     error = CommonTx_put_data(eCOMM_UARTx, databuf, data_len);
-    if (COMMON_NO_ERROR != error)
-        LOG_E("%s:\nCommonSenddata:\t%d", __FILE__, __LINE__);
+    if (COMMON_NO_ERROR != error) {
+        LOG_E("%s %d:\nCommonSenddata error:%d\r\n", __FILE__, __LINE__, error);
+        return error;
+    }
 
     while (!CommonTxBuf_is_Empty(eCOMM_UARTx)) {
         SendByte((UARTxTypeDef)(eCOMM_UARTx + 1), getCommonTx_char(eCOMM_UARTx, &error));
         if (COMMON_NO_ERROR != error)
             LOG_E("%s:\nCommonSenddata:\t%d", __FILE__, __LINE__);
     }
+
+    return COMMON_TX_COMPLETE;
 }
 
 static uint8_t CommonRxBuf_is_Empty(eCommon_UARTx eCOMM_UARTx) 
@@ -221,7 +226,7 @@ uint8_t getCommonRx_char(eCommon_UARTx eCOMM_UARTx, uint8_t *error)
 
     if (eCOMM_UARTx >= COMMON_UARTX_MAX) {
         *error = COMMON_INV_CH_ERROR;
-        LOG_E("%s:\ngetCommonRx_char:\t%d", __FILE__, __LINE__);
+        LOG_E("%s %d:\ngetCommonRx_char: %d\r\n", __FILE__, __LINE__, *error);
         return (NUL);
     }
 
@@ -277,7 +282,7 @@ uint8_t getCommonRx_data(eCommon_UARTx eCOMM_UARTx, uint8_t *src_buf, uint16_t b
             *src_buf = getCommonRx_char(eCOMM_UARTx, &error);
             src_buf++;
             if (COMMON_NO_ERROR != error)
-                LOG_E("%s:\ngetCommonRx_data:\t%d", __FILE__, __LINE__);
+                LOG_E("%s %d:\ngetCommonRx_data:%d\r\n", __FILE__, __LINE__, error);
         }
 
     }

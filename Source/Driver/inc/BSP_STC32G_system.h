@@ -13,7 +13,7 @@
 #define POINT_HIGHT_ADDRESS     (uint8_t volatile*)0xFFFFFF
 
 
-#define BIT(x)                  (1 << x)
+#define BIT(x)                  (1 << (x))
 #define IS_POINT_PARAM(point)   ((POINT_LOW_ADDRESS < point) && (POINT_HIGHT_ADDRESS> point))
 
 // typedef _Bool                bool;

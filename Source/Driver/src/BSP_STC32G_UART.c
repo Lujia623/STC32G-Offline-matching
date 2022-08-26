@@ -116,6 +116,29 @@ static void SetTimerxBaudRateGenerator(UARTxTypeDef UARTx, BAUD_RATE_TimerDef eB
     }
 }
 
+void Receive_Ebable(UARTxTypeDef UARTx, uint8_t enable)
+{
+    switch (UARTx) {
+        case UART1:
+            REN = enable;
+            break;
+
+        case UART2:
+            S2REN = enable;
+            break;
+
+        case UART3:
+            S3REN = enable;
+            break;
+
+        case UART4:
+            S4REN = enable;
+            break;
+    
+    default:
+        break;
+    }
+}
 
 void SendByte(UARTxTypeDef UARTx, uint8_t byte) 
 {

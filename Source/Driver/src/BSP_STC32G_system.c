@@ -1,6 +1,7 @@
 #include "BSP_STC32G_system.h"
 #include "BSP_STC32G_GPIO.h"
 #include "BSP_STC32G_UART.h"
+#include "BSP_STC32G_TIMER.h"
 #include "app_uart.h"
 #include "app_led.h"
 #include "app_key.h"

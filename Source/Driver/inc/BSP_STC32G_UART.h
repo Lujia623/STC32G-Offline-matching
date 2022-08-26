@@ -91,6 +91,8 @@ void UART3_conifg(void);
 
 void UART4_conifg(void);
 
+void Receive_Ebable(UARTxTypeDef UARTx, uint8_t enable);
+
 void SendByte(UARTxTypeDef UARTx, uint8_t byte);
 
 uint8_t ReceiveByte(UARTxTypeDef UARTx);

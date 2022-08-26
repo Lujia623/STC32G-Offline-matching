@@ -263,7 +263,7 @@ void delay_us(uint16_t us)
     TF0 = 0;
     TR0 = 1;
     while (!TF0);
-    TR0 = 0;
+    // TR0 = 0;
 }
 
 void delay_ms(uint16_t ms) 

@@ -1,7 +1,8 @@
 #ifndef __APP_UART_H_
 #define __APP_UART_H_
 
-#include "STC32G_config.h"
+#include "BSP_STC32G_system.h"
+#include "BSP_STC32G_UART.h"
 
 //#pragma pack(4)
 
@@ -21,6 +22,7 @@
 #define COMMON_RX_BUF_EMPTY       4     //Rx buf is empty
 #define COMMON_RX_BUF_FULL        5     //Rx buf is full
 #define COMMON_PARAM_INV          6     //param invalid
+#define COMMON_TX_COMPLETE        7     //tx complete
 
 typedef enum {
     COMMON_UART1,
@@ -55,7 +57,7 @@ uint8_t CommonTx_put_char(eCommon_UARTx eCOMM_UARTx, uint8_t byte);
 
 uint8_t getCommonTx_char(eCommon_UARTx eCOMM_UARTx, uint8_t *error);
 
-void CommonSenddata(eCommon_UARTx eCOMM_UARTx, const uint8_t *databuf, uint16_t data_len);
+uint8_t CommonSenddata(eCommon_UARTx eCOMM_UARTx, const uint8_t *databuf, uint16_t data_len);
 
 uint32_t getCommonRxCtr(eCommon_UARTx eCOMM_UARTx, uint8_t *error);
 

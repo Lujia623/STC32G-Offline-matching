@@ -1,7 +1,9 @@
 #include "app_cli.h"
 #include "app_uart.h"
 #include "BSP_STC32G_TIMER.h"
+#include "BSP_STC32G_GPIO.h"
 #include "crc.h"
+#include "debug.h"
 
 static uint8_t addrBuf[UART_DEVICE_MAX][CLI_PAYLOAD_LENGTH];
 static uint8_t revBuf[CLI_PAYLOAD_LENGTH];
@@ -18,6 +20,7 @@ static void CLISend(eCommon_UARTx eCOMM_UARTx, uint8_t *buffer, uint16_t buffer_
     scli_Command command;
     uint32_t preamble = GTP_PREAMBLE2;
     static uint16_t msg_sn = 0;
+    uint8_t tx_complete[COMMON_UARTX_MAX];
 
     sendbuf = (uint8_t *) xmalloc(sizeof(scli_Command) + sizeof(buffer_len) + buffer_len + \
                                   GTP_PREAMBLE_LENGTH + CLI_SN_LENGTH + CLI_START_LENGTH + CLI_TAIL_LENGTH);
@@ -90,7 +93,12 @@ static void CLISend(eCommon_UARTx eCOMM_UARTx, uint8_t *buffer, uint16_t buffer_
 
     ClearCommonTxBuf(eCOMM_UARTx);
     ClearCommonRxBuf(eCOMM_UARTx);
-    CommonSenddata(eCOMM_UARTx, sendbuf, sendbuf_length);
+    Receive_Ebable((UARTxTypeDef)(eCOMM_UARTx + 1), DISABLE); 
+    delay_us(100);
+    tx_complete[eCOMM_UARTx] = CommonSenddata(eCOMM_UARTx, sendbuf, sendbuf_length);
+    if(tx_complete[eCOMM_UARTx] == COMMON_TX_COMPLETE) {
+        Receive_Ebable((UARTxTypeDef)(eCOMM_UARTx + 1), ENABLE);
+    }
     msg_sn++;
     if (msg_sn >= 65535)
         msg_sn = 0;
@@ -185,7 +193,7 @@ static int8_t data_analysis(eCommon_UARTx eCOMM_UARTx, uint8_t *rev_buf, uint8_t
     xprintf("rev_buf getcrc32:%ld\r\n", (uint32_t) getcrc32(rev_buf, crc32length));
 
     if ((uint32_t) getcrc32(rev_buf, crc32length) == (uint32_t) rev_command.CRC32) {
-        xprintf("%s:\n:%d:CLI_REVDATA_OK\r\n", __FILE__, __LINE__);
+        xprintf("\r\ndata_analysis CLI_REVDATA_OK\r\n");
     } else {
         return (int8_t) CLI_REVDATA_ERROR;
     }
@@ -287,6 +295,7 @@ uint8_t CLIGetDeviceAddr(eCommon_UARTx eCOMM_UARTx, eDeviceTypedef eDevice)
                   buffer_len, module_id, msg_id);
 
             CLISend(eCOMM_UARTx, NULL, 0, CLI_MODULEID_APPLICATION, APP_CLI_MSGID_GET_BDADDR);
+            memset(addrBuf[eDevice], 0, sizeof(addrBuf[eDevice]));
             delay_ms(10);
             error = CLIReceive(eCOMM_UARTx, addrBuf[eDevice], &buffer_len, &module_id, &msg_id);
             if ((CLI_REVDATA_OK == error) && (CLI_MODULEID_APPLICATION == module_id) && (APP_CLI_MSGID_GET_BDADDR == msg_id)) {
@@ -295,7 +304,7 @@ uint8_t CLIGetDeviceAddr(eCommon_UARTx eCOMM_UARTx, eDeviceTypedef eDevice)
                 }
                 LOG_D("CLIGetDeviceAddr :addrBuf:%ld,buffer_len:%d,module_id:%d,msg_id:%d\r\n", addrBuf[eDevice], \
                       buffer_len, module_id, msg_id);
-                result = CLI_DEVICEX_TRANSFER_SUCCESS(eDevice);
+                result = CLI_DEVICEX_TRANSFER_SUCCESS((uint8_t)eDevice);
                 return result;
             }
         } else {
@@ -312,7 +321,6 @@ uint8_t CLIGetDeviceAddr(eCommon_UARTx eCOMM_UARTx, eDeviceTypedef eDevice)
 uint8_t CLI_EVTUSR_REBOOT(eCommon_UARTx eCOMM_UARTx) 
 {
     uint16_t count = CLI_RETRY_TIMES;
-    uint8_t i = 0;
     int8_t error = CLI_REVDATA_OK;
     uint8_t CMD_buf[] = {0x20, 0x04};
     uint16_t buffer_len = 0;
@@ -348,6 +356,11 @@ uint8_t CLI_Send_EVENT(eCommon_UARTx eCOMM_UARTx, uint16_t event)
     uint8_t CMD_buf[] = {0x20, 0x04};
     uint16_t buffer_len = 0;
     uint16_t module_id = 0, msg_id = 0;
+
+    CMD_buf[0] = (event >> 8) & 0xff;
+    CMD_buf[1]= event & 0xff;
+    for(i = 0; i < sizeof(CMD_buf); i++)
+        xprintf("CMD_buf[%d]:%0x\r\n", i, CMD_buf[i]);
 
     do {
         CLISend(eCOMM_UARTx, (uint8_t *) exit_sleep, sizeof(exit_sleep), CLI_MODULEID_LOWPOWER, CLI_EXIT_SLEEP);
@@ -398,6 +411,43 @@ uint8_t CLIGetLAPMode(eCommon_UARTx eCOMM_UARTx)
     return CLI_TIMEOUT;
 }
 
+///TODO:交叉写入一个地址
+static void Pared_OneDevice(uint8_t result)
+{
+    uint8_t intersectAddr_result;
+
+    if((result & CLI_DEVICEX_TRANSFER_SUCCESS(UART_MASTER)) && \
+        (result & CLI_DEVICEX_TRANSFER_SUCCESS(UART_SLAVE1))) {
+        intersectAddr_result = 0;
+        xprintf("CLI_IntersectAddr START SLAVE1----->MASTER:\r\n");
+        intersectAddr_result |= CLI_IntersectAddr(COMMON_UART2, UART_SLAVE1, addrBuf[UART_SLAVE1], revBuf);
+        xprintf("CLI_IntersectAddr SLAVE1:END\tintersectAddr_result:%0x\r\n", intersectAddr_result);
+        
+
+        xprintf("CLI_IntersectAddr MASTER----->SLAVE1 START:\r\n");
+        intersectAddr_result |= CLI_IntersectAddr(COMMON_UART3, UART_MASTER, addrBuf[UART_MASTER], revBuf);
+        xprintf("CLI_IntersectAddr:END\tintersectAddr_result:%0x\r\n", intersectAddr_result);
+
+    }
+
+    if((result & CLI_DEVICEX_TRANSFER_SUCCESS(UART_MASTER)) && \
+        (result & CLI_DEVICEX_TRANSFER_SUCCESS(UART_SLAVE2))) {
+        intersectAddr_result = 0;
+        intersectAddr_result |= CLI_IntersectAddr(COMMON_UART2, UART_SLAVE2, addrBuf[UART_SLAVE2], revBuf);
+        xprintf("CLI_IntersectAddr SLAVE2:END\tintersectAddr_result:%0x\r\n", intersectAddr_result);
+        
+        xprintf("CLI_IntersectAddr MASTER----->SLAVE2 START:\r\n");
+        intersectAddr_result |= CLI_IntersectAddr(COMMON_UART4, UART_MASTER, addrBuf[UART_MASTER], revBuf);
+        xprintf("CLI_IntersectAddr:END\tintersectAddr_result:%0x\r\n", intersectAddr_result);
+    }
+
+    if(intersectAddr_result & CLI_TIMEOUT) {
+        LOG_E("Pared_OneDevice TIMEOUT,intersectAddr_result:%0x\r\n",intersectAddr_result);
+    } else {
+        LOG_D("Pared one slave device\r\n",0);
+    }
+}
+
 int8_t CLI_Process(void) 
 {
     static uint32_t counter = 0;
@@ -407,6 +457,11 @@ int8_t CLI_Process(void)
     xprintf("COMMON_UART2---------->UART_MASTER:START\r\n");
     getAddr_result |= CLIGetDeviceAddr(COMMON_UART2, UART_MASTER);
     xprintf("COMMON_UART2---------->UART_MASTER:END\tgetAddr_result:%0x\r\n", getAddr_result);
+
+    if(getAddr_result & CLI_TIMEOUT) {
+        LOG_E("Get MASTER Addr TIMEOUT :%0x\r\n", getAddr_result);
+        return CLI_GET_ADDR_TIMEOUT;
+    }
 
     xprintf("COMMON_UART3---------->UART_SLAVE1:START\r\n");
     getAddr_result |= CLIGetDeviceAddr(COMMON_UART3, UART_SLAVE1);
@@ -459,7 +514,7 @@ int8_t CLI_Process(void)
             LOG_E("REBOOT FAIL\r\n", 0);
         }
 
-        xprintf("Pared SUCCESS: %ld\r\n", ++counter);
+        LOG_G("Pared SUCCESS: %ld\r\n", ++counter);
     }
 
     return CLI_PROCESS_SUCCESS;
