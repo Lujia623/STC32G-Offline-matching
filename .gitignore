@@ -39,6 +39,7 @@ tmp/
 *.dep
 *.d
 *.crf
+*.obj
 *.bak
 
 *.axf
