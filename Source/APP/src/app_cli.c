@@ -8,6 +8,7 @@
 static uint8_t addrBuf[UART_DEVICE_MAX][CLI_PAYLOAD_LENGTH];
 static uint8_t revBuf[CLI_PAYLOAD_LENGTH];
 static const uint8_t exit_sleep[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00}; // FFFFFFFFFFFFFFFF00
+static const uint8_t cmd_switch_cli[] = {'7', '0', '3', 'X', 'W', 'u', 'Q', 'i', 'C', 'l', 'i'};
 
 static int8_t data_analysis(eCommon_UARTx eCOMM_UARTx, uint8_t *rev_buf, uint8_t *buffer, \
                             uint16_t *buffer_len, uint16_t *module_id, uint16_t *msg_id);
@@ -20,7 +21,7 @@ static void CLISend(eCommon_UARTx eCOMM_UARTx, uint8_t *buffer, uint16_t buffer_
     scli_Command command;
     uint32_t preamble = GTP_PREAMBLE2;
     static uint16_t msg_sn = 0;
-    uint8_t tx_complete[COMMON_UARTX_MAX];
+    uint8_t tx_complete[COMMON_UARTX_MAX] = {0};
 
     sendbuf = (uint8_t *) xmalloc(sizeof(scli_Command) + sizeof(buffer_len) + buffer_len + \
                                   GTP_PREAMBLE_LENGTH + CLI_SN_LENGTH + CLI_START_LENGTH + CLI_TAIL_LENGTH);
@@ -98,6 +99,9 @@ static void CLISend(eCommon_UARTx eCOMM_UARTx, uint8_t *buffer, uint16_t buffer_
     tx_complete[eCOMM_UARTx] = CommonSenddata(eCOMM_UARTx, sendbuf, sendbuf_length);
     if(tx_complete[eCOMM_UARTx] == COMMON_TX_COMPLETE) {
         Receive_Ebable((UARTxTypeDef)(eCOMM_UARTx + 1), ENABLE);
+    } else {
+        LOG_E("CLISend Receive DISABLE\r\n", 0);
+        while (1);
     }
     msg_sn++;
     if (msg_sn >= 65535)
@@ -275,6 +279,9 @@ uint8_t CLIGetDeviceAddr(eCommon_UARTx eCOMM_UARTx, eDeviceTypedef eDevice)
     uint16_t module_id = 0, msg_id = 0;
     uint8_t result = 0;
 
+#if CHARGER_BOX == CHARGER_BOX_A3939W
+    switch_to_cli(eCOMM_UARTx);
+#endif
     TIMER_START(TIMER3);
 
     do {
@@ -289,7 +296,7 @@ uint8_t CLIGetDeviceAddr(eCommon_UARTx eCOMM_UARTx, eDeviceTypedef eDevice)
 
         if ((CLI_REVDATA_OK == error) && (CLI_MODULEID_LOWPOWER == module_id) && (CLI_EXIT_SLEEP == msg_id)) {
             for (i = 0; i < buffer_len; i++) {
-                LOG_D("CLIGetDeviceAddr addrBuf[%d]:%0x\r\n", i, addrBuf[eDevice][i]);
+                LOG_D("CLIGetDeviceAddr addrBuf[%d]:%0x\r\n", i, revBuf[i]);
             }
             LOG_D("CLIGetDeviceAddr :addrBuf:%ld,buffer_len:%d,module_id:%d,msg_id:%d\r\n", addrBuf[eDevice],
                   buffer_len, module_id, msg_id);
@@ -347,6 +354,81 @@ uint8_t CLI_EVTUSR_REBOOT(eCommon_UARTx eCOMM_UARTx)
 
     return CLI_TIMEOUT;
 }
+
+void switch_to_cli(eCommon_UARTx eCOMM_UARTx)
+{
+    uint8_t tx_complete[COMMON_UARTX_MAX] = {0};
+
+    Receive_Ebable((UARTxTypeDef)(eCOMM_UARTx + 1), DISABLE);
+    SetUARTXBaudRate((UARTxTypeDef)(eCOMM_UARTx + 1), USE_BAUDRETE_38400_BPS);
+    delay_us(100);
+    ClearCommonTxBuf(eCOMM_UARTx);
+    ClearCommonRxBuf(eCOMM_UARTx);
+    LOG_D("switch to cli\r\n", 0);
+    tx_complete[eCOMM_UARTx] = CommonSenddata(eCOMM_UARTx, (uint8_t*)cmd_switch_cli, sizeof(cmd_switch_cli));
+    if(tx_complete[eCOMM_UARTx] == COMMON_TX_COMPLETE) {
+        Receive_Ebable((UARTxTypeDef)(eCOMM_UARTx + 1), ENABLE);
+        LOG_D("switch to cli success\r\n", 0);
+    } else {
+        LOG_E("switch_to_cli Receive DISABLE\r\n", 0);
+        while (1);
+    }
+
+    SetUARTXBaudRate((UARTxTypeDef)(eCOMM_UARTx + 1), USE_BAUDRETE_2M_BPS);
+    delay_us(100);
+}
+/*
+void get_peer_addr(eCommon_UARTx eCOMM_UARTx)
+{
+    uint8_t count = CLI_RETRY_TIMES;
+    uint8_t i = 0;
+    int8_t error = CLI_REVDATA_OK;
+    uint16_t buffer_len = 0;
+    uint16_t module_id = 0, msg_id = 0;
+    uint8_t result = 0;
+    
+    TIMER_START(TIMER3);
+
+    do {
+        if (TIMER_COMPARE(TIMER3, CLI_SEND_TIMEOUT)) {
+            xprintf("CLIGetDeviceAddr timeout:%f\r\n", getTimerx(TIMER3));
+            break;
+        }
+
+        CLISend(eCOMM_UARTx, (uint8_t *) exit_sleep, sizeof(exit_sleep), CLI_MODULEID_LOWPOWER, CLI_EXIT_SLEEP);
+        delay_ms(10);
+        error = CLIReceive(eCOMM_UARTx, revBuf, &buffer_len, &module_id, &msg_id);
+
+        if ((CLI_REVDATA_OK == error) && (CLI_MODULEID_LOWPOWER == module_id) && (CLI_EXIT_SLEEP == msg_id)) {
+            for (i = 0; i < buffer_len; i++) {
+                LOG_D("CLIGetDeviceAddr addrBuf[%d]:%0x\r\n", i, revBuf[i]);
+            }
+            LOG_D("CLIGetDeviceAddr :addrBuf:%ld,buffer_len:%d,module_id:%d,msg_id:%d\r\n", addrBuf[eDevice],
+                  buffer_len, module_id, msg_id);
+
+            CLISend(eCOMM_UARTx, NULL, 0, CLI_MODULEID_APPLICATION, APP_CLI_MSGID_GET_BDADDR);
+            memset(addrBuf[eDevice], 0, sizeof(addrBuf[eDevice]));
+            delay_ms(10);
+            error = CLIReceive(eCOMM_UARTx, addrBuf[eDevice], &buffer_len, &module_id, &msg_id);
+            if ((CLI_REVDATA_OK == error) && (CLI_MODULEID_APPLICATION == module_id) && (APP_CLI_MSGID_GET_BDADDR == msg_id)) {
+                for (i = 0; i < buffer_len; i++) {
+                    LOG_D("CLIGetDeviceAddr addrBuf[%d]:%0x\r\n", i, addrBuf[eDevice][i]);
+                }
+                LOG_D("CLIGetDeviceAddr :addrBuf:%ld,buffer_len:%d,module_id:%d,msg_id:%d\r\n", addrBuf[eDevice], \
+                      buffer_len, module_id, msg_id);
+                result = CLI_DEVICEX_TRANSFER_SUCCESS((uint8_t)eDevice);
+                return result;
+            }
+        } else {
+            LOG_D("CLIGetDeviceAddr retry:%d\r\n", count++);
+        }
+
+    } while (1);
+
+    TIMER_END(TIMER3);
+
+    return CLI_TIMEOUT;
+}*/
 
 uint8_t CLI_Send_EVENT(eCommon_UARTx eCOMM_UARTx, uint16_t event) 
 {

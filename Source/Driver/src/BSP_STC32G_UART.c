@@ -6,6 +6,7 @@
 bit uart1_busy = 0, uart2_busy = 0, uart3_busy = 0, uart4_busy = 0;
 
 static uint8_t UARTx_is_Inited[UART_MAX];
+static UART_InitTypeDef UARTX_InitStruct[UART_MAX];
 
 static void SetTimerxBaudRateGenerator(UARTxTypeDef UARTx, BAUD_RATE_TimerDef eBaud_Rate, uint16_t BaudRate);
 
@@ -52,6 +53,8 @@ static void SetUARTxModeRXENABLE(UARTxTypeDef UARTx, UART_ModeDef eMode, uint8_t
 
 static void SetTimerxBaudRateGenerator(UARTxTypeDef UARTx, BAUD_RATE_TimerDef eBaud_Rate, uint16_t BaudRate) 
 {
+    assert_param(IS_UARTX(UARTx));
+    assert_param(IS_BAUD_RATE_TIMER(eBaud_Rate));
 
     switch (eBaud_Rate) {
         case BAUD_RATE_TIMER1:
@@ -114,6 +117,14 @@ static void SetTimerxBaudRateGenerator(UARTxTypeDef UARTx, BAUD_RATE_TimerDef eB
         default :
             break;
     }
+}
+
+void SetUARTXBaudRate(UARTxTypeDef UARTx, uint32_t baudrate)
+{
+    uint16_t counter;
+
+    counter = (MAIN_Fosc / 4 / baudrate);
+    SetTimerxBaudRateGenerator(UARTx, UARTX_InitStruct[UARTx].BaudRateTimer, counter);
 }
 
 void Receive_Ebable(UARTxTypeDef UARTx, uint8_t enable)
@@ -316,6 +327,7 @@ void UART1_conifg(void)
 
     UART1_SW(UART1_SW_P30_P31);
     UART_Init(UART1, &UART_InitStructure);
+    UARTX_InitStruct[UART1] = UART_InitStructure;
     NVIC_UART1_Init(ENABLE,Priority_1);
 }
 
@@ -325,11 +337,12 @@ void UART2_conifg(void)
 
     UART_InitStructure.BaudRateTimer = BAUD_RATE_TIMER2;
     UART_InitStructure.UART_Mode = UART12_8bit_BRTx;
-    UART_InitStructure.UART_BaudRate = 2000000UL;
+    UART_InitStructure.UART_BaudRate = USE_BAUDRETE_2M_BPS;
     UART_InitStructure.UART_RxEnable = ENABLE;
 
     UART2_SW(UART2_SW_P46_P47);
     UART_Init(UART2, &UART_InitStructure);
+    UARTX_InitStruct[UART2] = UART_InitStructure;
     NVIC_UART2_Init(ENABLE, Priority_1);
 }
 
@@ -339,11 +352,12 @@ void UART3_conifg(void)
 
     UART_InitStructure.BaudRateTimer = BAUD_RATE_TIMER2;
     UART_InitStructure.UART_Mode = UART34_8bit_BRTx;
-    UART_InitStructure.UART_BaudRate = 2000000UL;
+    UART_InitStructure.UART_BaudRate = USE_BAUDRETE_2M_BPS;
     UART_InitStructure.UART_RxEnable = ENABLE;
 
     UART3_SW(UART3_SW_P50_P51);
     UART_Init(UART3, &UART_InitStructure);
+    UARTX_InitStruct[UART3] = UART_InitStructure;
     NVIC_UART3_Init(ENABLE, Priority_1);
 }
 
@@ -353,10 +367,11 @@ void UART4_conifg(void)
 
     UART_InitStructure.BaudRateTimer = BAUD_RATE_TIMER2;
     UART_InitStructure.UART_Mode = UART34_8bit_BRTx;
-    UART_InitStructure.UART_BaudRate = 2000000UL;
+    UART_InitStructure.UART_BaudRate = USE_BAUDRETE_2M_BPS;
     UART_InitStructure.UART_RxEnable = ENABLE;
 
     UART4_SW(UART4_SW_P52_P53);
     UART_Init(UART4, &UART_InitStructure);
+    UARTX_InitStruct[UART4] = UART_InitStructure;
     NVIC_UART4_Init(ENABLE, Priority_1);
 }

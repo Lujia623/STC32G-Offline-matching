@@ -44,6 +44,10 @@
 #define CLI_SLAVE1_TRANSFER_SUCCESS        BIT(2)
 #define CLI_SLAVE2_TRANSFER_SUCCESS        BIT(3)
 
+#define CHARGER_BOX_NONE                   0xA0
+#define CHARGER_BOX_A3939W                 0xA1
+#define CHARGER_BOX                        CHARGER_BOX_A3939W
+
 typedef void (*cli_msg_handle)(uint8_t *buffer, uint16_t length);
 
 typedef enum {
@@ -191,6 +195,8 @@ uint8_t CLIGetDeviceAddr(eCommon_UARTx eCOMM_UARTx, eDeviceTypedef eDevice);
 uint8_t CLI_EVTUSR_REBOOT(eCommon_UARTx eCOMM_UARTx);
 
 uint8_t CLIGetLAPMode(eCommon_UARTx eCOMM_UARTx);
+
+void switch_to_cli(eCommon_UARTx eCOMM_UARTx);
 
 int8_t CLI_Process(void);
 

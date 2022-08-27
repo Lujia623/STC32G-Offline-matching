@@ -49,6 +49,11 @@ typedef struct UART_InitStructure {
     uint8_t BaudRateDouble;                 //²¨ÌØÂÊ±¶Ôö, ENABLE,DISABLE
 } UART_InitTypeDef;
 
+#define USE_BAUDRETE_2M_BPS             2000000UL
+#define USE_BAUDRETE_115200_BPS         115200UL
+#define USE_BAUDRETE_38400_BPS          38400UL
+#define USE_BAUDRETE_9600_BPS           9600UL
+
 /**
  * @brief UARTx
  * 
@@ -92,6 +97,8 @@ void UART3_conifg(void);
 void UART4_conifg(void);
 
 void Receive_Ebable(UARTxTypeDef UARTx, uint8_t enable);
+
+void SetUARTXBaudRate(UARTxTypeDef UARTx, uint32_t baudrate);
 
 void SendByte(UARTxTypeDef UARTx, uint8_t byte);
 
